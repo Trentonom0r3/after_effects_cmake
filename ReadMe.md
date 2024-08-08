@@ -24,7 +24,7 @@ This is still to be considered a "work-in-progress". There are a few issues with
 
 - Improve build process, add more options for effect plugins (parameter supervision, global setup, setdown, etc)
 - Improve Documentation and examples.
-
+- Implement `PyFxCore` dll setup. 
 
 ## Usage
 
