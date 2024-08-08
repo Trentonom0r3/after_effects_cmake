@@ -20,6 +20,12 @@ This is still to be considered a "work-in-progress". There are a few issues with
 - Provide a mechanism to configure `.aex` effect plugins and build them using Python.
 - Enable users to write custom render scripts for effect plugins, allowing near real-time processing and previews.
 
+## TODO
+
+- Improve build process, add more options for effect plugins (parameter supervision, global setup, setdown, etc)
+- Improve Documentation and examples.
+
+
 ## Usage
 
 ### Adjust CMakeLists.txt
