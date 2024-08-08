@@ -64,6 +64,33 @@ if __name__ == "__main__":
     build_plugin(output_folder, plugin)
 ```
 
+## More Parameters Options:
+```py
+class Slider(Parameter):
+    def __init__(self, name, default, min_val, max_val, param_id):
+        super().__init__(name, "slider", default, param_id, min=min_val, max=max_val)
+
+class Checkbox(Parameter):
+    def __init__(self, name, default, param_id):
+        super().__init__(name, "checkbox", default, param_id)
+
+class Color(Parameter):
+    def __init__(self, name, default, param_id):
+        super().__init__(name, "color", default, param_id)
+
+class Point(Parameter):
+    def __init__(self, name, default, param_id):
+        super().__init__(name, "point", default, param_id)
+
+class Point3D(Parameter):
+    def __init__(self, name, default, param_id):
+        super().__init__(name, "point3d", default, param_id)
+
+class Popup(Parameter):
+    def __init__(self, name, choices, default, param_id):
+        super().__init__(name, "popup", default, param_id, choices=choices)
+```
+
 ### Render Function
 
 The render function should have the following format:
