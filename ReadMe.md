@@ -5,6 +5,9 @@ This project provides a means to configure `.aex` effect plugins and build them 
 
 Plugins appear under `Effect -> Python Plugins` in Adobe After Effects.
 
+## DO NOTE
+This is still to be considered a "work-in-progress". There are a few issues with the embedded interpreter setup, which will be fixed in the first official release. 
+
 ## Dependencies
 
 - [CMake](https://cmake.org/)
