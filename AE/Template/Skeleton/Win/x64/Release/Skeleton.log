@@ -1,0 +1,22 @@
+﻿  Compiling the PiPL
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.39.33523 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  SkeletonPiPL.r
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.39.33523 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  
+  SkeletonPiPL.rrc
+  AEGP_SuiteHandler.cpp
+  MissingSuiteError.cpp
+  Skeleton.cpp
+C:\Users\tjerf\Downloads\SDKNEW\AfterEffectsSDK\Examples\Util\Param_Utils.h(343,2): error C2220: the following warning is treated as an error
+  (compiling source file '../Skeleton.cpp')
+  
+C:\Users\tjerf\Downloads\SDKNEW\AfterEffectsSDK\Examples\Util\Param_Utils.h(343,2): warning C4996: 'strncpy': This function or variable may be unsafe. Consider using strncpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  (compiling source file '../Skeleton.cpp')
+  
+C:\Users\tjerf\Downloads\SDKNEW\AfterEffectsSDK\Examples\Template\Skeleton\Skeleton.h(59,10): error C1083: Cannot open include file: 'Python.h': No such file or directory
+  (compiling source file '../Skeleton.cpp')
+  
+  Generating Code...

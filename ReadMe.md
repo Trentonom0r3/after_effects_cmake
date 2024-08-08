@@ -1,32 +1,113 @@
-# After Effects Cmake Example
 
-90% of the credit goes to [Wunkolo](https://github.com/Wunkolo) who wrote most of this `CMakeLists.txt`. I've adapted it for CI use and 
-added some instructions for using it from the command line as well as making it apply to the `Skeleton` example from the AfterEffectsSDK. 
+# After Effects Python Plugin Builder
 
-If you move this CmakeLists.txt into the Skeleton example in the AfterEffectsSDK you can run either of the following for 
-cross platform builds.
+This project provides a means to configure `.aex` effect plugins and build them using Python. By embedding the Python interpreter, users can write custom render scripts to use in an effect plugin, similar to a native effect. This enables near real-time processing and previews of the Python code you're working with.
 
-### MacOS
+Plugins appear under `Effect -> Python Plugins` in Adobe After Effects.
 
-```bash
-take build
-cmake .. -GXcode
-xcodebuild
+## Dependencies
+
+- [CMake](https://cmake.org/)
+- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
+- [pybind11 (x64 static)](https://pybind11.readthedocs.io/en/stable/) (Recommended install via VCPKG)
+- [Python 3.11.9](https://www.python.org/downloads/release/python-3119/)
+
+## Goals
+
+- Provide a mechanism to configure `.aex` effect plugins and build them using Python.
+- Enable users to write custom render scripts for effect plugins, allowing near real-time processing and previews.
+
+## Usage
+
+### Adjust CMakeLists.txt
+
+Adjust the paths to include directories. Remove all hard-coded paths for your own. Change the following lines:
+
+```cmake
+# Set the path to Python include and library directories
+set(PYTHON_INCLUDE_DIR "C:/Users/your_username/AppData/Local/Programs/Python/Python311/include")
+set(PYTHON_LIBRARY "C:/Users/your_username/AppData/Local/Programs/Python/Python311/libs")
+set(VCPKG_INCLUDE_DIR "C:/Users/your_username/vcpkg/installed/x64-windows-static/include")
 ```
 
-the resulting `Skeleton.plugin` signed bundle will be in the `/Debug` directory, you can pass the appropriate flags to produce a release package.
+### Write Configuration Script
 
-### Windows 
+Users write a configuration script to set and define parameters and the render function.
 
-The following can be run from CMD, replacing "Visual Studio 17 2022" with your desired toolkit, and the path the the "MSBuild.exe" with the 
-appropriate MSBuild.exe path. The resulting `Skeleton.aex` will be place in the `/Debug` output directory, you can pass the appropriate build flags to change the 
-product type.
+#### Example Configuration Script
 
-```bash
-mkdir build
-cd build
-cmake .. -G "Visual Studio 17 2022" 
-& 'c:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' .\Skeleton.sln
+Create a Python script to configure and build your plugin. Here is an example:
+
+```python
+import os
+import sys
+
+# Add the parent directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
+
+from After_Effects.plugin import Plugin, Slider, Checkbox, Color, Point, Point3D, Popup
+from After_Effects.build import build_plugin
+
+if __name__ == "__main__":
+    output_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), "build"))
+    src_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), "ExamplePlugin"))
+
+    plugin = Plugin("ExamplePlugin")
+
+    # Set the source folder and automatically configure requirements and render function
+    plugin.set_src_folder(src_folder)
+
+    # Add parameters to the plugin
+    slider_param = Slider("SliderParam", 0.0, 0.0, 100.0, 1.0)
+    plugin.add_parameter(slider_param)
+    
+    build_plugin(output_folder, plugin)
 ```
 
-Alternatively, **just open this file in Visual Studio or vscode** with the CMake and CMake Tools plugins and you can use them to automatically configure and build the project. *This is probably the preferred method for most*, but driving from the command line is relevant for CI/CD purposes.
+### Render Function
+
+The render function should have the following format:
+
+```python
+RenderFunc = Callable[[np.ndarray, Dict[str, Union[int, float, bool, str, np.ndarray]]], np.ndarray]
+```
+
+- The first argument is always an RGBA numpy array.
+- The `params` dictionary contains all parameters by the names you set in your plugin configuration.
+
+### Directory Structure
+
+The `src` folder contains all of your necessary processing scripts.
+Initial build structure should follow that of the provided example:
+
+```
+EXAMPLE/build.py
+EXAMPLE/your_plugin_name
+EXAMPLE/your_plugin_name/render.py
+EXAMPLE/your_plugin_name/requirements.txt
+and whatever other files you need.
+```
+
+Upon building, you'll have an output like:
+
+```
+.build\your_plugin_name\your_plugin_name.aex
+.build\your_plugin_name\src\your_plugin_name.py
+.build\your_plugin_name\src\requirements.txt
+```
+
+## Building the Plugin
+
+Follow these steps to build your plugin:
+
+1. **Install Dependencies**: Ensure you have CMake, Visual Studio 2022, pybind11, and Python 3.11.9 installed on your system.
+2. **Write Configuration Script**: Create your configuration script as shown in the example above. This script will define your plugin's parameters and the render function.
+3. **Run the Configuration Script**: Execute the script to build your plugin. The script will configure the source folder, set up the necessary parameters, and build the plugin into the specified output folder.
+
+## Finally, Install to After Effects.
+Move the entire `YOUR_PLUGIN_NAME` folder from `build/YOUR_PLUGIN_NAME` into 
+`DRIVE:\Program Files\Adobe\Adobe After Effects 202X\Support Files\Plug-ins\Effects`
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request or open an Issue on GitHub if you have any suggestions or improvements.

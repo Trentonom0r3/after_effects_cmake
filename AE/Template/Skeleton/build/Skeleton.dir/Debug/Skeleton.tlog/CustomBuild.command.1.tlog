@@ -1,0 +1,40 @@
+^C:\USERS\TJERF\SOURCE\REPOS\AFTER_EFFECTS_CMAKE\AE\TEMPLATE\SKELETON\BUILD\CMAKEFILES\5813A2229B17F80A54290FC6BDDB739F\SKELETON.RR.RULE
+setlocal
+cl /I "../../..//Headers" /I "../../..//Headers/SP" /I "../../..//Util" /I "../../..//Resources" /EP "C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/SkeletonPiPL.r" > C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/Skeleton.rr
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\TJERF\SOURCE\REPOS\AFTER_EFFECTS_CMAKE\AE\TEMPLATE\SKELETON\BUILD\CMAKEFILES\5813A2229B17F80A54290FC6BDDB739F\SKELETON.RRC.RULE
+setlocal
+C:\Users\tjerf\source\repos\after_effects_cmake\AE\Resources\PiPLtool.exe C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/Skeleton.rr C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/Skeleton.rrc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\TJERF\SOURCE\REPOS\AFTER_EFFECTS_CMAKE\AE\TEMPLATE\SKELETON\BUILD\CMAKEFILES\5813A2229B17F80A54290FC6BDDB739F\SKELETON.RC.RULE
+setlocal
+cl /D MSWindows /EP C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/Skeleton.rrc > C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/Skeleton.rc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\TJERF\SOURCE\REPOS\AFTER_EFFECTS_CMAKE\AE\TEMPLATE\SKELETON\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton -BC:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build --check-stamp-file C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

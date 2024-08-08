@@ -1,0 +1,10 @@
+^C:\USERS\TJERF\SOURCE\REPOS\AFTER_EFFECTS_CMAKE\AE\TEMPLATE\SKELETON\BUILD\CMAKEFILES\23874F0959C38CA40068EA8B6CD05EAA\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton -BC:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/Skeleton.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
