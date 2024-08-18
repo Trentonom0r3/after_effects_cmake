@@ -5,27 +5,35 @@ This project provides a means to configure `.aex` effect plugins and build them 
 
 Plugins appear under `Effect -> Python Plugins` in Adobe After Effects.
 
-## DO NOTE
-This is still to be considered a "work-in-progress". There are a few issues with the embedded interpreter setup, which will be fixed in the first official release. 
-
 ## Dependencies
 
 - [CMake](https://cmake.org/)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
 - [pybind11 (x64 static)](https://pybind11.readthedocs.io/en/stable/) (Recommended install via VCPKG)
 - [Python 3.11.9](https://www.python.org/downloads/release/python-3119/)
+- [PyFxCore](https://github.com/Trentonom0r3/PyFxCore_Main)
 
 ## Goals
 
 - Provide a mechanism to configure `.aex` effect plugins and build them using Python.
 - Enable users to write custom render scripts for effect plugins, allowing near real-time processing and previews.
 
+## ChangeLog
+
+- [1.0.0] **Initial Release**
+    - Properly accounts for effects that resize the frame
+    - Uses `PyFx.dll` for processing to prevent issues with multiple effects
+        - To Configure PyFx.dll, alter the config file;
+            `https://github.com/Trentonom0r3/PyFxCore_Main/blob/main/PyFX.config`
+            - and place it in the same directory as `PyFx.dll`    
+
 ## TODO
 
 - Improve build process, add more options for effect plugins (parameter supervision, global setup, setdown, etc)
 - Improve Documentation and examples.
-- Implement `PyFxCore` dll setup. 
-
+- Bind certain AE Effect processes to Python.
+    - EX. `PF_InData`, `PF_OutData`.
+        - With utilities to store and access things like global and sequence data. 
 ## Usage
 
 ### Adjust CMakeLists.txt
@@ -37,6 +45,7 @@ Adjust the paths to include directories. Remove all hard-coded paths for your ow
 set(PYTHON_INCLUDE_DIR "C:/Users/your_username/AppData/Local/Programs/Python/Python311/include")
 set(PYTHON_LIBRARY "C:/Users/your_username/AppData/Local/Programs/Python/Python311/libs")
 set(VCPKG_INCLUDE_DIR "C:/Users/your_username/vcpkg/installed/x64-windows-static/include")
+set(PYFX_INCLUDE_DIR "C:/Users/tjerf/source/repos/PyFxCore")
 ```
 
 ### Write Configuration Script
@@ -67,10 +76,12 @@ if __name__ == "__main__":
     plugin.set_src_folder(src_folder)
 
     # Add parameters to the plugin
-    slider_param = Slider("SliderParam", 0.0, 0.0, 100.0, 1.0)
+    slider_param = Slider("SliderParam", 0.0, 0.0, 10.0, 1.0, i_resize_buffer=True) # If your slider values relate to scale, set this to true.
     plugin.add_parameter(slider_param)
     
+    # Now, build the plugin with the updated build function
     build_plugin(output_folder, plugin)
+
 ```
 
 ## More Parameters Options:
@@ -141,8 +152,11 @@ Follow these steps to build your plugin:
 3. **Run the Configuration Script**: Execute the script to build your plugin. The script will configure the source folder, set up the necessary parameters, and build the plugin into the specified output folder.
 
 ## Finally, Install to After Effects.
-Move the entire `YOUR_PLUGIN_NAME` folder from `build/YOUR_PLUGIN_NAME` into 
+- Move the entire `YOUR_PLUGIN_NAME` folder from `build/YOUR_PLUGIN_NAME` into 
 `DRIVE:\Program Files\Adobe\Adobe After Effects 202X\Support Files\Plug-ins\Effects`
+
+- Move `PyFx.dll` into `DRIVE:\Program Files\Adobe\Adobe After Effects 202X\Support Files`
+    - Adjust your configuration file, and place it alongside. `https://github.com/Trentonom0r3/PyFxCore_Main/blob/main/PyFX.config`
 
 ## Contributing
 

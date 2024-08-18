@@ -5,14 +5,14 @@ import subprocess
 import numpy as np
 from typing import Dict, Union
 from .plugin import Plugin, Slider, Checkbox, Color, Point, Point3D, Popup
-from .utils import generate_cpp_params_setup, copy_and_replace_folder
+from .utils import generate_cpp_frame_setup, generate_cpp_params_setup, copy_and_replace_folder, replace_frame_setup
 
 def replace_text_in_file(file_path, search_text, replace_text):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
     except Exception as e:
-        print(f"Error reading file {file_path}: {e}")
+        #print(f"Error reading file {file_path}: {e}")
         return
 
     new_content = content.replace(search_text, replace_text)
@@ -49,7 +49,7 @@ def rename_skeleton_files_and_folder(dest_folder, plugin_name):
                 new_filename = re.sub(r'Skeleton|skeleton', plugin_name, filename)
                 old_file = os.path.join(root, filename)
                 new_file = os.path.join(root, new_filename)
-                print(f"Renaming file {old_file} to {new_file}")
+                #print(f"Renaming file {old_file} to {new_file}")
                 shutil.move(old_file, new_file)
                 replace_text_in_file(new_file, "Skeleton", plugin_name)
                 replace_text_in_file(new_file, "skeleton", plugin_name)
@@ -60,13 +60,13 @@ def rename_skeleton_files_and_folder(dest_folder, plugin_name):
                 new_dirname = re.sub(r'Skeleton|skeleton', plugin_name, dirname)
                 old_dir = os.path.join(root, dirname)
                 new_dir = os.path.join(root, new_dirname)
-                print(f"Renaming folder {old_dir} to {new_dir}")
+                #print(f"Renaming folder {old_dir} to {new_dir}")
                 shutil.move(old_dir, new_dir)
                 
                 for root_sub, dirs_sub, files_sub in os.walk(new_dir):
                     for filename in files_sub:
                         file_path = os.path.join(root_sub, filename)
-                        print(f"Processing file {file_path}")
+                        #print(f"Processing file {file_path}")
                         replace_text_in_file(file_path, "Skeleton", plugin_name)
                         replace_text_in_file(file_path, "skeleton", plugin_name)
                         replace_text_in_file(file_path, "SKELETON", plugin_name)
@@ -91,7 +91,14 @@ def build_plugin(output_folder, plugin: Plugin = None):
 
     # Copy and replace the template folder
     copy_and_replace_folder(src_folder, dest_folder, generate_cpp_params_setup(plugin.parameters))
+
     rename_skeleton_files_and_folder(dest_folder, plugin_name)
+
+    # Path to the C++ file that needs updating
+    cpp_file = os.path.join(dest_folder, "Template", plugin_name, plugin_name + ".cpp")
+
+    # Replace the FrameSetup function in the C++ file
+    replace_frame_setup(cpp_file, generate_cpp_frame_setup(plugin.parameters))
 
     cmake_file = os.path.join(dest_folder, "Template", plugin_name, "CMakeLists.txt")
     if os.path.exists(cmake_file):
@@ -99,15 +106,11 @@ def build_plugin(output_folder, plugin: Plugin = None):
 
     build_dir = os.path.join(dest_folder, "Template", plugin_name, "build")
     print(f"Configuring and building plugin in {build_dir}")
-    os.makedirs(build_dir, exist_ok=True)
 
-    # Ensure CMakeCache.txt and CMakeFiles directory are removed
-    cmake_cache_file = os.path.join(build_dir, "CMakeCache.txt")
-    cmake_files_dir = os.path.join(build_dir, "CMakeFiles")
-    if os.path.exists(cmake_cache_file):
-        os.remove(cmake_cache_file)
-    if os.path.exists(cmake_files_dir):
-        shutil.rmtree(cmake_files_dir)
+    # Ensure the build directory is cleared and recreated
+    if os.path.exists(build_dir):
+        shutil.rmtree(build_dir)
+    os.makedirs(build_dir, exist_ok=True)
 
     src_dir = os.path.join(dest_folder, "Template", plugin_name)
 

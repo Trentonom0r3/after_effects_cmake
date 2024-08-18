@@ -96,4 +96,7 @@
       <Filter>Resources</Filter>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="..\app.manifest" />
+  </ItemGroup>
 </Project>

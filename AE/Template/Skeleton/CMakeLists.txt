@@ -11,6 +11,7 @@ set(AE_SDK_PATH "../../")
 set(PYTHON_INCLUDE_DIR "C:/Users/tjerf/AppData/Local/Programs/Python/Python311/include")
 set(PYTHON_LIBRARY "C:/Users/tjerf/AppData/Local/Programs/Python/Python311/libs")
 set(VCPKG_INCLUDE_DIR "C:/Users/tjerf/vcpkg/installed/x64-windows-static/include")
+set(PYFX_INCLUDE_DIR "C:/Users/tjerf/source/repos/PyFxCore")
 
 # Specify your source files
 file(GLOB_RECURSE SOURCE_FILES 
@@ -30,14 +31,19 @@ include_directories(
   ${AESDK_INCLUDE}
   ${PYTHON_INCLUDE_DIR}  # Include Python headers
   ${VCPKG_INCLUDE_DIR} # Include VCPKG headers
+  ${PYFX_INCLUDE_DIR} # Include PyFX headers
   ./
 )
 
 # Link Python library
 link_directories(${PYTHON_LIBRARY})
 
+# Link PyFX library
+link_directories(${PYFX_INCLUDE_DIR}/x64/Debug)
+
 # Specify the plugin target
 add_library(${PROJECT_NAME} MODULE ${SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} PRIVATE PyFxCore)
 
 # Set runtime library options for MSVC
 if(MSVC)

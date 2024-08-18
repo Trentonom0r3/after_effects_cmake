@@ -1,4 +1,0 @@
-C:\Users\tjerf\source\repos\after_effects_cmake\AE\Template\Skeleton\build\Debug\python3.dll
-C:\Users\tjerf\source\repos\after_effects_cmake\AE\Template\Skeleton\build\Debug\python311.dll
-C:\Users\tjerf\source\repos\after_effects_cmake\AE\Template\Skeleton\build\Debug\zlib1.dll
-C:\Users\tjerf\source\repos\after_effects_cmake\AE\Template\Skeleton\build\Skeleton.dir\Debug\Skeleton.vcxproj.Up2Date

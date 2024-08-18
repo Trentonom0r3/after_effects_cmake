@@ -1,13 +1,11 @@
 #include "Skeleton.h"
 #include <iostream>
 #include <filesystem>
-
+#include "pch.h"
 #include <fstream>
 
 namespace fs = std::filesystem;
-
 namespace py = pybind11;
-
 int SKELETON_NUM_PARAMS = 1;
 
 static PF_Err 
@@ -26,7 +24,10 @@ About (
 static PF_Err GlobalSetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output) {
 	out_data->my_version = PF_VERSION(MAJOR_VERSION, MINOR_VERSION, BUG_VERSION, STAGE_VERSION, BUILD_VERSION);
 	PF_Err err = PF_Err_NONE;
-	out_data->out_flags = PF_OutFlag_DEEP_COLOR_AWARE;  // Just 16bpc, not 32bpc
+    out_data->out_flags = PF_OutFlag_DEEP_COLOR_AWARE | PF_OutFlag_DISPLAY_ERROR_MESSAGE | PF_OutFlag_I_EXPAND_BUFFER;  // Just 16bpc, not 32bpc
+    if (!pyfx::running()) {
+        pyfx::start();
+    }
 	return err;
 }
 
@@ -40,8 +41,21 @@ ParamsSetup(
     PF_Err        err = PF_Err_NONE;
     PF_ParamDef    def;
 
+    AEFX_CLR_STRUCT(def);
+
+
     out_data->num_params = SKELETON_NUM_PARAMS;
     return err;
+}
+
+std::string getCurrentDirectory() {
+    char buffer[MAX_PATH];
+    if (GetModuleFileNameA(NULL, buffer, MAX_PATH)) {
+        std::string path(buffer);
+        size_t pos = path.find_last_of("\\/");
+        return path.substr(0, pos);
+    }
+    return "";
 }
 
 py::dict convertParamsToDict(PF_ParamDef* params[], PF_InData* in_data) {
@@ -110,7 +124,6 @@ std::string toLowerCase(const std::string& str) {
     return result;
 }
 
-
 // Helper function to get the path of the current module
 std::string getCurrentModulePath() {
     char modulePath[MAX_PATH];
@@ -122,6 +135,19 @@ std::string getCurrentModulePath() {
     }
     return std::string(modulePath);
 }
+
+static PF_Err
+FrameSetup(
+    PF_InData* in_data,
+    PF_OutData* out_data,
+    PF_ParamDef* params[],
+    PF_LayerDef* output)
+{
+
+    return PF_Err_NONE;
+}
+
+
 
 static PF_Err Render(
     PF_InData* in_data,
@@ -148,7 +174,6 @@ static PF_Err Render(
     std::ofstream log_file(log_path, std::ios_base::app);
     if (!log_file) {
         std::cerr << "Failed to open log file: " << log_path << std::endl;
-        return PF_Err_INTERNAL_STRUCT_DAMAGED;
     }
 
     // Redirect std::cerr to the log file
@@ -159,52 +184,80 @@ static PF_Err Render(
     std::cerr << "Full path: " << full_path << std::endl;
 
     try {
-        if (!Py_IsInitialized()) {
-            py::initialize_interpreter();
-        }
+        py::gil_scoped_acquire acquire;
 
         py::dict paramsDict = convertParamsToDict(params, in_data);
 
         py::module_ sys = py::module_::import("sys");
         py::object path = sys.attr("path");
-        // Append necessary directories to the Python path
         path.attr("append")(src_dir.string()); // Add directory to path
         std::cerr << "Python path appended successfully." << std::endl;
 
-        py::module_ script = py::module_::import(ScriptName.c_str());
-        std::cerr << "Script loaded successfully." << std::endl;
+        py::module_ script;
+        try {
+            script = py::module_::import(ScriptName.c_str());
+            std::cerr << "Script loaded successfully." << std::endl;
+        }
+        catch (const py::error_already_set& e) {
+            std::cerr << "Error importing script: " << e.what() << std::endl;
+            strncpy(out_data->return_msg, "Error importing Python script. Check the log file for more details.", PF_MAX_EFFECT_MSG_LEN);
+            out_data->return_msg[PF_MAX_EFFECT_MSG_LEN] = '\0'; // Ensure null-termination
+            err = PF_Err_INTERNAL_STRUCT_DAMAGED;
+            throw; // Re-throw to the main catch block
+        }
 
-        py::array output_array = AEToNumpyConverter::ConvertLayerToNumpy(&params[0]->u.ld, in_data);
-        std::cerr << "Output array created successfully." << std::endl;
+        py::object render_func;
+        try {
+            render_func = script.attr("render");
+            if (!py::isinstance<py::function>(render_func)) {
+                throw std::runtime_error("The 'render' attribute is not a callable function.");
+            }
+            std::cerr << "'render' function found successfully." << std::endl;
+        }
+        catch (const py::error_already_set& e) {
+            std::cerr << "Error accessing 'render' attribute: " << e.what() << std::endl;
+            strncpy(out_data->return_msg, "Error accessing 'render' function. Check the log file for more details.", PF_MAX_EFFECT_MSG_LEN);
+            out_data->return_msg[PF_MAX_EFFECT_MSG_LEN] = '\0'; // Ensure null-termination
+            err = PF_Err_INTERNAL_STRUCT_DAMAGED;
+            throw; // Re-throw to the main catch block
+        }
+        catch (const std::runtime_error& e) {
+            std::cerr << "Runtime error: " << e.what() << std::endl;
+            strncpy(out_data->return_msg, e.what(), PF_MAX_EFFECT_MSG_LEN);
+            out_data->return_msg[PF_MAX_EFFECT_MSG_LEN] = '\0'; // Ensure null-termination
+            err = PF_Err_INTERNAL_STRUCT_DAMAGED;
+            throw; // Re-throw to the main catch block
+        }
 
-        py::object result = script.attr("render")(output_array, paramsDict);
-        std::cerr << "Render function called successfully." << std::endl;
+        py::array output_array;
+        try {
+            output_array = render_func(AEToNumpyConverter::ConvertLayerToNumpy(&params[0]->u.ld, in_data), paramsDict).cast<py::array>();
+            std::cerr << "Render function executed successfully." << std::endl;
 
-        AEToNumpyConverter::ConvertNumpyToLayerDef(result.cast<py::array>(), output);
-        std::cerr << "New image created successfully." << std::endl;
+            // Convert the result back to AE's PF_LayerDef format
+            AEToNumpyConverter::ConvertNumpyToLayerDef(output_array, output, in_data);
+            std::cerr << "New image created successfully." << std::endl;
 
-        err = PF_Err_NONE;
-    }
-    catch (const py::error_already_set& e) {
-        std::cerr << "Python Error (py::error_already_set): " << std::endl;
-        std::cerr << e.what() << std::endl;
-        std::cerr << e.trace() << std::endl; // Capture the Python traceback
-        err = PF_Err_INTERNAL_STRUCT_DAMAGED;
-    }
-    catch (const std::invalid_argument& e) {
-        std::cerr << "Error (std::invalid_argument): " << e.what() << std::endl;
-        err = PF_Err_INTERNAL_STRUCT_DAMAGED;
-    }
-    catch (const std::runtime_error& e) {
-        std::cerr << "Error (std::runtime_error): " << e.what() << std::endl;
-        err = PF_Err_INTERNAL_STRUCT_DAMAGED;
-    }
-    catch (const std::exception& e) {
-        std::cerr << "Error (std::exception): " << e.what() << std::endl;
-        err = PF_Err_INTERNAL_STRUCT_DAMAGED;
+            sys.attr("path").attr("remove")(src_dir.string()); // Clean up Python path
+            err = PF_Err_NONE;
+        }
+        catch (const py::error_already_set& e) {
+            std::cerr << "Python error in 'render' function: " << e.what() << std::endl;
+            strncpy(out_data->return_msg, e.what(), PF_MAX_EFFECT_MSG_LEN);
+            out_data->return_msg[PF_MAX_EFFECT_MSG_LEN] = '\0'; // Ensure null-termination
+            err = PF_Err_INTERNAL_STRUCT_DAMAGED;
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Exception in 'render' function: " << e.what() << std::endl;
+            strncpy(out_data->return_msg, e.what(), PF_MAX_EFFECT_MSG_LEN);
+            out_data->return_msg[PF_MAX_EFFECT_MSG_LEN] = '\0'; // Ensure null-termination
+            err = PF_Err_INTERNAL_STRUCT_DAMAGED;
+        }
     }
     catch (...) {
-        std::cerr << "Unknown error occurred." << std::endl;
+        std::cerr << "An unknown error occurred." << std::endl;
+        strncpy(out_data->return_msg, "An unknown error occurred.", PF_MAX_EFFECT_MSG_LEN);
+        out_data->return_msg[PF_MAX_EFFECT_MSG_LEN] = '\0'; // Ensure null-termination
         err = PF_Err_INTERNAL_STRUCT_DAMAGED;
     }
 
@@ -214,6 +267,7 @@ static PF_Err Render(
 
     return err;
 }
+
 
 extern "C" DllExport
 PF_Err PluginDataEntryFunction2(
@@ -265,6 +319,10 @@ EffectMain(
 									params,
 									output);
 				break;
+
+            case PF_Cmd_FRAME_SETUP:
+                err = FrameSetup(in_data, out_data, params, output);
+                break;
 				
 			case PF_Cmd_PARAMS_SETUP:
 

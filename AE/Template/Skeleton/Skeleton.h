@@ -66,6 +66,8 @@ typedef unsigned short PixelType;
 #include <cstddef> // Add this line to include the definition for ssize_t
 #include <vector>
 #include <string>
+//for cerr
+#include <iostream>
 
 /* Versioning information */
 
@@ -76,78 +78,112 @@ typedef unsigned short PixelType;
 #define BUILD_VERSION   1
 
 namespace py = pybind11;
+
 class AEToNumpyConverter {
 public:
     static py::array ConvertLayerToNumpy(PF_LayerDef* layerDef, PF_InData* in_data) {
-        // Get a pointer to the pixel data
-        PF_Pixel8* pixelData = nullptr;
-        PF_GET_PIXEL_DATA8(layerDef, NULL, &pixelData);
-
-        if (!pixelData) {
-            throw std::runtime_error("Failed to get pixel data.");
-        }
-
-        // Calculate the width and height of the full layer
-        int width = layerDef->width;
-        int height = layerDef->height;
-
-        // Create a NumPy array for the output
-        std::vector<py::ssize_t> shape = { height, width, 4 };
-        std::vector<py::ssize_t> strides = { static_cast<py::ssize_t>(width * 4), 4, 1 };
-        py::array np_array = py::array(py::buffer_info(
-            nullptr,                    // Pointer to the data (nullptr for now)
-            sizeof(uint8_t),            // Size of one element
-            py::format_descriptor<uint8_t>::format(), // Format descriptor
-            3,                          // Number of dimensions
-            shape,                      // Dimensions
-            strides                     // Strides
-        ));
-
-        // Allocate memory for the NumPy array and get a pointer to it
-        uint8_t* np_data = static_cast<uint8_t*>(np_array.request().ptr);
-
-        // Copy pixel data from AE and reorder channels from ARGB to RGBA
-        for (int y = 0; y < height; ++y) {
-            PF_Pixel8* srcRowPtr = pixelData + y * (layerDef->rowbytes / sizeof(PF_Pixel8));
-            uint8_t* dstRowPtr = np_data + y * width * 4;
-            for (int x = 0; x < width; ++x) {
-                dstRowPtr[4 * x + 0] = srcRowPtr[x].red;   // R
-                dstRowPtr[4 * x + 1] = srcRowPtr[x].green; // G
-                dstRowPtr[4 * x + 2] = srcRowPtr[x].blue;  // B
-                dstRowPtr[4 * x + 3] = srcRowPtr[x].alpha; // A
+        try {
+            if (!layerDef) {
+                throw std::invalid_argument("Layer definition (layerDef) is null.");
             }
-        }
 
-        return np_array;
+            // Get a pointer to the pixel data
+            PF_Pixel8* pixelData = nullptr;
+            PF_GET_PIXEL_DATA8(layerDef, NULL, &pixelData);
+
+            if (!pixelData) {
+                throw std::runtime_error("Failed to get pixel data.");
+            }
+
+            // Calculate the width and height of the full layer
+            int width = layerDef->width;
+            int height = layerDef->height;
+
+            if (width <= 0 || height <= 0) {
+                throw std::runtime_error("Invalid layer dimensions.");
+            }
+
+            // Create a NumPy array for the output
+            std::vector<py::ssize_t> shape = { height, width, 4 };
+            std::vector<py::ssize_t> strides = { static_cast<py::ssize_t>(width * 4), 4, 1 };
+            py::array np_array = py::array(py::buffer_info(
+                nullptr,                    // Pointer to the data (nullptr for now)
+                sizeof(uint8_t),            // Size of one element
+                py::format_descriptor<uint8_t>::format(), // Format descriptor
+                3,                          // Number of dimensions
+                shape,                      // Dimensions
+                strides                     // Strides
+            ));
+
+            // Allocate memory for the NumPy array and get a pointer to it
+            uint8_t* np_data = static_cast<uint8_t*>(np_array.request().ptr);
+            if (!np_data) {
+                throw std::runtime_error("Failed to allocate memory for the NumPy array.");
+            }
+
+            // Copy pixel data from AE and reorder channels from ARGB to RGBA
+            for (int y = 0; y < height; ++y) {
+                PF_Pixel8* srcRowPtr = pixelData + y * (layerDef->rowbytes / sizeof(PF_Pixel8));
+                uint8_t* dstRowPtr = np_data + y * width * 4;
+                for (int x = 0; x < width; ++x) {
+                    dstRowPtr[4 * x + 0] = srcRowPtr[x].red;   // R
+                    dstRowPtr[4 * x + 1] = srcRowPtr[x].green; // G
+                    dstRowPtr[4 * x + 2] = srcRowPtr[x].blue;  // B
+                    dstRowPtr[4 * x + 3] = srcRowPtr[x].alpha; // A
+                }
+            }
+
+            return np_array;
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error in ConvertLayerToNumpy: " << e.what() << std::endl;
+            throw;  // Re-throw the exception for higher-level handling
+        }
     }
 
-    static void ConvertNumpyToLayerDef(const py::array& np_array, PF_LayerDef* layerDef) {
-        int width = layerDef->width;
-        int height = layerDef->height;
-
-        // Validate input array
-        if (np_array.ndim() != 3 || np_array.shape(2) != 4) {
-            throw std::invalid_argument("NumPy array must have 3 dimensions and 4 channels (RGBA).");
-        }
-
-        // Get the pointer to the data
-        uint8_t* np_data = static_cast<uint8_t*>(np_array.request().ptr);
-
-        // Copy pixel data from NumPy array and reorder channels from RGBA to ARGB
-        for (int y = 0; y < height; ++y) {
-            uint8_t* srcRowPtr = np_data + y * width * 4;
-            PF_Pixel8* dstRowPtr = reinterpret_cast<PF_Pixel8*>(reinterpret_cast<uint8_t*>(layerDef->data) + y * layerDef->rowbytes);
-            for (int x = 0; x < width; ++x) {
-                dstRowPtr[x].red = srcRowPtr[4 * x + 0]; // R
-                dstRowPtr[x].green = srcRowPtr[4 * x + 1]; // G
-                dstRowPtr[x].blue = srcRowPtr[4 * x + 2]; // B
-                dstRowPtr[x].alpha = srcRowPtr[4 * x + 3]; // A
+    static void ConvertNumpyToLayerDef(const py::array& np_array, PF_LayerDef* world, PF_InData* in_data) {
+        try {
+            // Validate input array
+            if (np_array.ndim() != 3 || np_array.shape(2) != 4) {
+                throw std::invalid_argument("NumPy array must have 3 dimensions and 4 channels (RGBA).");
             }
-        }
 
-        //std::cerr << "ConvertNumpyToLayerDef: Data copied to layerDef successfully." << std::endl;
+            // Get the pointer to the data
+            uint8_t* np_data = static_cast<uint8_t*>(np_array.request().ptr);
+            if (!np_data) {
+                throw std::runtime_error("Failed to get pointer to NumPy array data.");
+            }
+          
+            int width = np_array.shape(1);
+            int height = np_array.shape(0);
+
+            PF_EffectWorld worlde;
+            in_data->utils->new_world(in_data->effect_ref, static_cast<A_long>(width), static_cast<A_long>(height), 0, &worlde);
+
+            PF_COPY(world, &worlde, NULL, NULL);
+            //PF_COPY(world, &worlde, NULL, NULL);
+            // Copy pixel data from NumPy array and reorder channels from RGBA to ARGB
+            for (int y = 0; y < height; ++y) {
+                uint8_t* srcRowPtr = np_data + y * width * 4;
+                PF_Pixel8* dstRowPtr = reinterpret_cast<PF_Pixel8*>(reinterpret_cast<uint8_t*>(world->data) + y * world->rowbytes);
+
+                for (int x = 0; x < width; ++x) {
+                    dstRowPtr[x].red = srcRowPtr[4 * x + 0];    // R
+                    dstRowPtr[x].green = srcRowPtr[4 * x + 1];  // G
+                    dstRowPtr[x].blue = srcRowPtr[4 * x + 2];   // B
+                    dstRowPtr[x].alpha = srcRowPtr[4 * x + 3];  // A
+                }
+            }
+            PF_DISPOSE_WORLD( &worlde);
+            std::cerr << "ConvertNumpyToLayerDef: Data copied to layerDef successfully." << std::endl;
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error in ConvertNumpyToLayerDef: " << e.what() << std::endl;
+            throw;  // Re-throw the exception for higher-level handling
+        }
     }
 };
+
 
 
 extern "C" {

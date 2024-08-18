@@ -1,3 +1,0 @@
-C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/CMakeFiles/Skeleton.dir
-C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/CMakeFiles/ALL_BUILD.dir
-C:/Users/tjerf/source/repos/after_effects_cmake/AE/Template/Skeleton/build/CMakeFiles/ZERO_CHECK.dir
